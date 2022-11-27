@@ -2,7 +2,6 @@
 
 
 const byte ANGLE_REG = 0x20; // Angler register for A1339.
-const byte READ = 0b11111100;
 
 const int ss_pin = 53;
 
@@ -30,46 +29,32 @@ void setup(void) {
 
 
 void loop(void) {
-
-
-
-int tmp_data = readRegister(0x20, 2);
-
-float angle = ((float)tmp_data / 8);
-
-Serial.println(angle);
-
-delay(20);
-
-}
-
-//Read from register from the A1335:
-unsigned int readRegister(byte thisRegister, int bytesToRead) {
-  byte inByte = 0;           // incoming byte from the SPI
-  unsigned int result = 0;   // result to return
+  int angle = 0;
   
-  byte dataToSend = thisRegister & READ;
-  //Serial.println(thisRegister, BIN);
-  // take the chip select low to select the device:
   digitalWrite(ss_pin, LOW);
-  // send the device the register you want to read:
-  SPI.transfer(thisRegister);
-  // send a value of 0 to read the first byte returned:
-  result = SPI.transfer(0x00);
-  // decrement the number of bytes left to read:
-  bytesToRead--;
-  // if you still have another byte to read:
-  if (bytesToRead > 0) {
-    // shift the first byte left, then get the second byte:
-    result = result << 8;
-    inByte = SPI.transfer(0x00);
-    // combine the byte you just got with the previous one:
-    result = result | inByte;
-    // decrement the number of bytes left to read:
-    bytesToRead--;
-  }
-  // take the chip select high to de-select:
+  
+  delay(2);
+
+  
+  SPI.transfer(ANGLE_REG);
+  byte angle_msb = SPI.transfer(0x00);
+  byte angle_lsb = SPI.transfer(0x00);
+  
+  //angle_lsb = angle_lsb & 0b11110000; // mask off flags
+  //angle_msb = angle_msb & 0b00001111; // mask off flags
+  angle = angle_msb;
+  
+  
+  //angle = angle << 8;
+  //angle = angle | angle_msb;
+
+  delay(2);
+
   digitalWrite(ss_pin, HIGH);
-  // return the result:
-  return (result);
+
+
+  Serial.println(angle);
+  
+  delay(20);
+
 }
