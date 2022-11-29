@@ -1,0 +1,10 @@
+first test with single myobrick
+
+input
+  - pos_encoder_pv
+  - torque_encoder_pv
+  - current_pv
+  - velocity_sp
+
+output
+  - pwm_sp
