@@ -14,7 +14,11 @@ The bench node acts a middle layer between the hardware and the controller. It's
 
 ## Controller node
 
-The controller node controls the joint by setting the pwm of the flexion and extension MyoBrick
+The controller node controls the angle of the joint by reading and writing to the different ROS topics exposed by the bench node. The controller node itself exposes a ROS topic interface for setting waypoints.
+
+## Evaluation node
+
+The evaluation node sends waypoints to the controller node and evaluates it's performance.
 
 
 ## ROS topics
