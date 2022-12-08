@@ -2,6 +2,8 @@
 
 
 const byte ANGLE_REG = 0x20; // Angler register for A1339.
+const byte TURN_REG = 0x2C; // Angler register for A1339.
+
 
 const int ss_pin = 53;
 
@@ -32,29 +34,20 @@ void loop(void) {
   int angle = 0;
   
   digitalWrite(ss_pin, LOW);
-  
   delay(2);
 
-  
-  SPI.transfer(ANGLE_REG);
-  byte angle_msb = SPI.transfer(0x00);
-  byte angle_lsb = SPI.transfer(0x00);
-  
-  //angle_lsb = angle_lsb & 0b11110000; // mask off flags
-  //angle_msb = angle_msb & 0b00001111; // mask off flags
-  angle = angle_msb;
-  
-  
-  //angle = angle << 8;
-  //angle = angle | angle_msb;
 
+  byte angle_msb = SPI.transfer(ANGLE_REG);
+  byte angle_lsb = SPI.transfer(0x00); // useless
+  
   delay(2);
-
   digitalWrite(ss_pin, HIGH);
+ 
 
+  angle = angle_lsb + 256 * (angle_msb & 0b00001111);
 
   Serial.println(angle);
-  
-  delay(20);
+
+  delay(10);
 
 }
