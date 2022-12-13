@@ -14,6 +14,31 @@ The bench node acts a middle layer between the hardware and the controller. It's
 - Exposing a standardised interface to controller via ROS topics.
 - Setting different load scenarios by controlling "Load control MyoBrick"
 
+### How to start
+1. Power up:
+    - power supply
+    - fpga computer
+    - prophet computer
+2. Connect to Roboy wifi.
+3. Start ROS master on prophet computer
+    ```
+    roscore
+    ```
+4. Start ROS slave on fpga computer
+    ```
+    ./roboy_plexus pinky.yaml
+    ```
+5. Activate roboy conda envireonment on prophet
+    ```
+    activate_conda
+    ```
+6. Start bench program
+    ```
+    cd ~/roboy_team_ws22/w22-test-bench/catkin_ws
+    python ./bench_main.py
+    ```
+    
+
 ### ROS topics
 - /test_bench/BenchMotorControl
   - float32 flex_myobrick_pwm
