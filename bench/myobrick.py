@@ -20,11 +20,11 @@ class Watchdog:
         self.timer.start()
 
     def stop(self):
-        if self.process and self.process.is_alive():
-            self.process.terminate()
-            self.process.join()
         if self.timer and self.timer.is_alive():
             self.timer.cancel()
+
+        if self.process and self.process.is_alive():
+            self.process.join()
 
     def reset(self):
         self.stop()
@@ -56,7 +56,10 @@ class MyoBrick:
 
     def _on_motor_state_callback(self, msg):
         with self.motor_state_lock:
-            self.motor_state = msg
+            #self.motor_state = msg
+            self.pv_pos_encoder = msg.encoder0_pos[self.motor_id]
+            self.pv_torque_encoder = msg.displacement[self.motor_id]
+            self.pv_current = msg.current[self.motor_id]
 
     def _set_pwm_watchdog_callback(self):
         self.set_pwm(0)
@@ -76,9 +79,9 @@ class MyoBrick:
         with self.motor_state_lock:
 
             return {
-                'pv_pos_encoder' : self.motor_state .encoder0_pos[self.motor_id],
-                'pv_torque_encoder' : self.motor_state .displacement[self.motor_id],
-                'pv_current' : self.motor_state .current[self.motor_id]
+                'pv_pos_encoder' : self.pv_pos_encoder,
+                'pv_torque_encoder' : self.pv_torque_encoder,
+                'pv_current' : self.pv_current
             }
         
     def start(self):
@@ -92,3 +95,7 @@ class MyoBrick:
         self.sp_pwm = 0
 
         self.is_running = False
+
+    def terminate(self):
+        self.stop()
+        self.wd.stop()

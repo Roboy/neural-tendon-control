@@ -1,0 +1,16 @@
+float32 angle
+
+bool safety_switch_pressed
+
+float32 flex_myobrick_pos_encoder
+float32 flex_myobrick_torque_encoder
+float32 flex_myobrick_current
+float32 flex_myobrick_pwm
+bool flex_myobrick_in_running_state
+
+float32 extend_myobrick_pos_encoder
+float32 extend_myobrick_torque_encoder
+float32 extend_myobrick_current
+float32 extend_myobrick_pwm
+bool extend_myobrick_in_running_state
+

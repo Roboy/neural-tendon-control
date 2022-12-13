@@ -1,0 +1,2 @@
+bench
+-DCATKIN_DEVEL_PREFIX=/home/roboy/roboy_team_ws22/w22-test-bench/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/roboy/roboy_team_ws22/w22-test-bench/catkin_ws/install -G Unix Makefiles

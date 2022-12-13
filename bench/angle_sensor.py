@@ -4,6 +4,12 @@ import serial
 class AngleSensor:
     def __init__(self, serial_port):
         self.ser = serial.Serial(serial_port, baudrate=9600)
+        self.ser.flush()
+        try:
+            line = self.ser.readline()
+        except:
+            pass
+
         self.angle = 0
 
         self.lock = threading.Lock()
