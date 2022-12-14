@@ -50,6 +50,7 @@ def callback(bench_state, global_state):
 
     if bench_state.safety_switch_pressed == True:
         print('Kill switch is pressed, stopping.')
+        rospy.signal_shutdown('')
         sys.exit()
 
     if bench_state.flex_myobrick_in_running_state == False:

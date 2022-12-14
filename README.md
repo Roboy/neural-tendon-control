@@ -128,6 +128,9 @@ The controller node controls the angle of the joint by reading and writing to th
 - go_up_and_down.py
   
     Makes the joint go up and down full range until once presses CTRL+C, then exits.
+- reset_kill_switch_and_start_motors.sh
+  
+    Resets the kill switch and starts the motors, then exits.
 
 
 ## Evaluation node
