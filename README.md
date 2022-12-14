@@ -118,7 +118,17 @@ The colunmns of the CSV file are
 
 ### Desc
 
-The controller node controls the angle of the joint by reading and writing to the different ROS topics exposed by the bench node. The controller node itself exposes a ROS topic interface for setting waypoints.
+The controller node controls the angle of the joint by reading and writing to the different ROS topics exposed by the bench node.
+
+
+### Controllers
+- go_to_middle_pos.py
+    
+    Makes the joint go to the middle position, then exits.
+- go_up_and_down.py
+  
+    Makes the joint go up and down full range until once presses CTRL+C, then exits.
+
 
 ## Evaluation node
 
