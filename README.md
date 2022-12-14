@@ -81,7 +81,7 @@ The bench node acts as a middle layer between the hardware and the controller. I
 
 
 ## Data recorder node
-### DESC
+### Desc
 
 The data recorder records the state of the bench to a specified CSV file.
 
@@ -97,6 +97,22 @@ The data recorder records the state of the bench to a specified CSV file.
     python ./data_recorder.py dataset.csv
     ```
 4. Press CTRL+C to stop recording.
+
+### CSV format
+The colunmns of the CSV file are
+  - timestamp
+  - angle
+  - safety_switch_pressed
+  - flex_myobrick_pos_encoder
+  - flex_myobrick_torque_encoder
+  - flex_myobrick_current
+  - flex_myobrick_pwm
+  - flex_myobrick_in_running_state
+  - extend_myobrick_pos_encoder
+  - extend_myobrick_torque_encoder
+  - extend_myobrick_current
+  - extend_myobrick_pwm
+  - extend_myobrick_in_running_state
 
 ## Controller node
 
