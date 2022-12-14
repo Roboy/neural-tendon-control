@@ -6,7 +6,7 @@
 
 ### Desc
 
-The bench node acts a middle layer between the hardware and the controller. It's tasks are:
+The bench node acts as a middle layer between the hardware and the controller. It's tasks are:
 
 - Initilization of motors and sensors after system startup.
 - Protecting the hardware from overload by overriding controller.
@@ -45,6 +45,7 @@ The bench node acts a middle layer between the hardware and the controller. It's
     rostopic echo /test_bench/BenchState
     ```
 8. Test the controls
+   
     If the joint is in a unsafe position, the kill will be set automatically immediately after reset and the motors will stop.
     ```
     # Source bench msg types
