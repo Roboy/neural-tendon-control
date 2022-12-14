@@ -10,7 +10,6 @@ The bench node acts as a middle layer between the hardware and the controller. I
 
 - Initilization of motors and sensors after system startup.
 - Protecting the hardware from overload by overriding controller.
-- Recording variables and saving the dataset to a file.
 - Exposing a standardised interface to controller via ROS topics.
 - Setting different load scenarios by controlling "Load control MyoBrick"
 
@@ -80,6 +79,24 @@ The bench node acts as a middle layer between the hardware and the controller. I
   - float32 extend_myobrick_pwm
   - bool extend_myobrick_in_running_state
 
+
+## Data recorder node
+### DESC
+
+The data recorder records the state of the bench to a specified CSV file.
+
+### How to start
+1. Start the bench node
+2. Activate roboy conda envireonment
+    ```
+    activate_conda
+    ```
+3. Start recording
+    ```
+    cd ~/roboy_team_ws22/w22-test-bench/data_recorder
+    python ./data_recorder.py dataset.csv
+    ```
+4. Press CTRL+C to stop recording.
 
 ## Controller node
 
