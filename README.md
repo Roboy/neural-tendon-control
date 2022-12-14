@@ -34,10 +34,28 @@ The bench node acts a middle layer between the hardware and the controller. It's
     ```
 6. Start bench program
     ```
-    cd ~/roboy_team_ws22/w22-test-bench/catkin_ws
+    cd ~/roboy_team_ws22/w22-test-bench/bench
     python ./bench_main.py
     ```
-    
+7. Observe the bench state
+    ```
+    # Source bench msg types
+    . ~/roboy_team_ws22/w22-test-bench/catkin_ws/devel/setup.bash
+    # Stream bench state
+    rostopic echo /test_bench/BenchState
+    ```
+8. Test the controls
+    If the joint is in a unsafe position, the kill will be set automatically immediately after reset and the motors will stop.
+    ```
+    # Source bench msg types
+    . ~/roboy_team_ws22/w22-test-bench/catkin_ws/devel/setup.bash
+    # The kill switch is set on startup so it need to be reseted.
+    rostopic pub /test_bench/BenchMotorControl bench/BenchMotorControl "{reset_kill_switch: true}" -1
+    # The motors are stopped when the kill switch is set, so start them after resetting the kill switch.
+    rostopic pub /test_bench/BenchMotorControl bench/BenchMotorControl "{flex_myobrick_start: true, extend_myobrick_start: true}" -1
+    # Test the motors, this command will make the joint flex. A watchdog sets the motor pwm to 0 after 0.5 seconds the last pwm command.
+    rostopic pub /test_bench/BenchMotorControl bench/BenchMotorControl "{flex_myobrick_pwm: 5, extend_myobrick_pwm: -3}" -1
+    ```
 
 ### ROS topics
 - /test_bench/BenchMotorControl
