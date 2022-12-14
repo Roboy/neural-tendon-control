@@ -122,6 +122,9 @@ The controller node controls the angle of the joint by reading and writing to th
 
 
 ### Controllers
+- babble.py
+    
+    Makes the joint babble up and down.
 - go_to_middle_pos.py
     
     Makes the joint go to the middle position, then exits.
