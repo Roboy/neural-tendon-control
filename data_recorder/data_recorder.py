@@ -35,6 +35,25 @@ def callback(msg, csv_file):
 
 # Open the CSV file in append mode
 with open(sys.argv[1], 'a') as csv_file:
+    # Write header to CSV file if it is empty
+    if csv_file.tell() == 0:
+        csv.writer(csv_file).writerow([
+            'timestamp',
+            'angle',
+            'safety_switch_pressed', 
+            'flex_myobrick_pos_encoder', 
+            'flex_myobrick_torque_encoder', 
+            'flex_myobrick_current', 
+            'flex_myobrick_pwm', 
+            'flex_myobrick_in_running_state', 
+            'extend_myobrick_pos_encoder', 
+            'extend_myobrick_torque_encoder', 
+            'extend_myobrick_current', 
+            'extend_myobrick_pwm', 
+            'extend_myobrick_in_running_state', 
+        ])
+
+
     # Initialize the ROS node
     rospy.init_node('listener')
 

@@ -3,7 +3,7 @@ import time
 import csv
 
 
-TOP_ANGLE_VALUE = 1737.0
+TOP_ANGLE_VALUE = 2050.0
 BOT_ANGLE_VALUE = 1223.0
 
 class SafetyObserver:

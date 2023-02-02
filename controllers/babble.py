@@ -59,7 +59,7 @@ def callback(bench_state, global_state):
 
         msg = BenchMotorControl()
 
-        sin_add = np.sin(time.time() / 3) * 4
+        sin_add = np.sin(time.time() / 3) * 7
         sin_add_2 = np.sin(time.time() ) * 3
 
 
