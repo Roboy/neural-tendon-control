@@ -36,7 +36,7 @@ start_bench:
 
 start_motors:
 	@echo "Starting motors..."
-	@cd ~/roboy_team_ws22/w22-test-bench/controllers; \
+	@cd ~/roboy_team_ws22/w22-test-bench/controllers/misc; \
 	python ./bench_main.py --start_motors
 
 
