@@ -9,7 +9,7 @@ from ros_loop import RosLoop
 from myobrick import MyoBrick
 from safety_observer import SafetyObserver
 from control_listener import ControlListener
-from state_broadcaster import StateBroadcaster
+from bench.tick_loop import TickLoop
 
 def run_bench_node():
     print("Starting bench node")
@@ -52,7 +52,7 @@ def run_bench_node():
 
     # Begin broadvasting bench state
     print('Init state broadcaster.')
-    state_broadcaster = StateBroadcaster(
+    state_broadcaster = TickLoop(
         angle_sensor,
         myobrick_flex,
         myobrick_extend,

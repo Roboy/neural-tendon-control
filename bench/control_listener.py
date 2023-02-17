@@ -13,6 +13,9 @@ class ControlListener:
         self.myobrick_extend = myobrick_extend
         self.safety_observer = safety_observer
 
+        # Input storage
+        self.input = {}
+
         # Setup message event callback
         self.subscriber = rospy.Subscriber('/test_bench/BenchMotorControl', BenchMotorControl, self._on_bench_motor_command_callback)
 
