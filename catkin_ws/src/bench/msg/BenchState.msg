@@ -1,3 +1,5 @@
+uint64 tick
+
 float32 angle
 
 bool safety_switch_pressed

@@ -9,7 +9,10 @@ from ros_loop import RosLoop
 from myobrick import MyoBrick
 from safety_observer import SafetyObserver
 from control_listener import ControlListener
-from bench.tick_loop import TickLoop
+from tick_loop import TickLoop
+
+
+TICK_LOOP_FREQ = 100
 
 def run_bench_node():
     print("Starting bench node")
@@ -57,7 +60,8 @@ def run_bench_node():
         myobrick_flex,
         myobrick_extend,
         safety_observer,
-        freq = 20
+        control_listener,
+        freq = TICK_LOOP_FREQ
     )
     print('Starting state broadcaster.')
     state_broadcaster.start()

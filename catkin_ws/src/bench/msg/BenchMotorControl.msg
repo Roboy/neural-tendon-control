@@ -1,3 +1,5 @@
+uint64 tick
+
 float32 flex_myobrick_pwm
 float32 extend_myobrick_pwm
 
