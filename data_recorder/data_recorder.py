@@ -18,7 +18,7 @@ def callback(msg, csv_file):
 
     # Write the message data to the CSV file
     writer.writerow([
-        time.time(),
+        msg.tick,
         msg.angle,
         msg.safety_switch_pressed, 
         msg.flex_myobrick_pos_encoder, 
@@ -38,7 +38,7 @@ with open(sys.argv[1], 'a') as csv_file:
     # Write header to CSV file if it is empty
     if csv_file.tell() == 0:
         csv.writer(csv_file).writerow([
-            'timestamp',
+            'tick',
             'angle',
             'safety_switch_pressed', 
             'flex_myobrick_pos_encoder', 
