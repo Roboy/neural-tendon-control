@@ -151,7 +151,6 @@ class SysModel(pl.LightningModule):
         next_predicted_output, next_predicted_internal = self(past_inputs, past_outputs, past_interals)
         loss = torch.nn.functional.mse_loss(next_predicted_output, next_output) + torch.nn.functional.mse_loss(next_predicted_internal, next_internal)
         self.log('train_loss', loss)
-        print(loss)
         return loss
 
     def configure_optimizers(self):
