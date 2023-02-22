@@ -17,87 +17,141 @@ import pytorch_lightning as pl
 
 
 
-class SystemControllerModel(pl.LightningModule):
-    def __init__(self, num_past_time_steps, num_future_time_steps, num_input_vars, num_output_vars, num_internal_vars):
+class SysModel(pl.LightningModule):
+    def __init__(self, num_past_time_steps, num_input_vars, num_output_vars, num_internal_vars):
         super().__init__()
 
         self.num_past_time_steps = num_past_time_steps
-        self.num_future_time_steps = num_future_time_steps
         self.num_input_vars = num_input_vars
         self.num_output_vars = num_output_vars
         self.num_internal_vars = num_internal_vars
 
-        # Convolute over past states
-        past_conv1_out_channels = 5
-        self.past_conv1 = torch.nn.Conv1d(num_input_vars + num_output_vars + num_internal_vars, past_conv1_out_channels, 3)
-        past_conv2_out_channels = 10
-        self.past_conv2 = torch.nn.Conv1d(past_conv1_out_channels, past_conv2_out_channels, 3)
-        past_conv2_out_dim = [past_conv2_out_channels, num_past_time_steps - 4]
 
+        # Conv 1
+        conv1_out_channels = 10
+        conv1_kernel_size = 3
+        self.conv1 = torch.nn.Conv1d(
+            sum([num_output_vars, num_internal_vars]), 
+            conv1_out_channels, 
+            3
+        )
+        conv1_out_dim = [conv1_out_channels, num_past_time_steps - 2]
 
-        # Convolute over desired outputs
-        future_conv1_out_channels = 5
-        self.future_desired_output_conv1 = torch.nn.Conv1d(num_output_vars, future_conv1_out_channels, 2)
-        future_conv2_out_channels = 5
-        self.future_desired_output_conv2 = torch.nn.Conv1d(future_conv2_out_channels, future_conv2_out_channels, 2)
-        future_conv2_out_dim = [future_conv2_out_channels, num_future_time_steps - 2]
+        # Conv 2
+        conv2_out_channels = 20
+        self.conv2 = torch.nn.Conv1d(
+            conv1_out_channels, 
+            conv2_out_channels, 
+            3
+        )
+        conv2_out_dim = [conv2_out_channels, conv1_out_dim[1] - 2]
+
+        conv3_out_channels = 10
+        self.conv3 = torch.nn.Conv1d(
+            sum([
+                num_output_vars,
+                num_internal_vars,
+                conv1_out_channels,
+                conv2_out_channels,
+                num_input_vars
+            ]), 
+            conv3_out_channels, 
+            15
+        )
+        conv3_out_dim = [conv3_out_channels, conv2_out_dim[1] - 14]
+  
 
         # Fully connected layers
         fc1_out_dim = 20
         self.fc1 = torch.nn.Linear(
-            180, # Got from debugging
-            num_future_time_steps * fc1_out_dim
+            sum([
+                conv3_out_dim[0] * conv3_out_dim[1],
+                conv1_out_dim[0] * conv1_out_dim[1],
+                num_input_vars * num_past_time_steps,
+            ]),
+            fc1_out_dim
         )
 
+        fc2_out_dim = 20
         self.fc2 = torch.nn.Linear(
-            num_future_time_steps * fc1_out_dim, 
-            num_future_time_steps * num_input_vars
+            fc1_out_dim, 
+            fc2_out_dim
+        )
+
+        self.fc3 = torch.nn.Linear(
+            fc2_out_dim, 
+            num_output_vars + num_internal_vars
         )
 
 
-    def forward(self, past_inputs, past_outputs, past_interals, future_desired_outputs):
+    def forward(self, past_inputs, past_outputs, past_interals):
         '''
         input:
             past_inputs: [batch_size, num_input_vars, num_past_time_steps]
             past_outputs: [batch_size, num_output_vars, num_past_time_steps]
             past_interals: [batch_size, num_internal_vars, num_past_time_steps]
-            future_desired_outputs: [batch_size, num_output_vars, num_future_time_steps]
 
         output:
-            future_predicted_inputs: [batch_size, num_input_vars, num_future_time_steps]
+            next_predicted_output: [batch_size, num_output_vars, 1]
+            next_predicted_internal: [batch_size, num_internal_vars, 1]
+
         '''
 
 
-        past_combined = torch.cat((past_inputs, past_outputs, past_interals), dim=1)
+        # Conv 1
+        past_outputs_internals = torch.cat([past_outputs, past_interals], dim=1)
+        x_1 = torch.nn.functional.relu(self.conv1(past_outputs_internals))
 
-        # Convolute over past combined
-        x_1 = torch.nn.functional.relu(self.past_conv1(past_combined))
-        x_2 = torch.nn.functional.relu(self.past_conv2(x_1))
+        # Conv 2
+        x_2 = torch.nn.functional.relu(self.conv2(x_1))
 
-        # Convolute over desired outputs
-        x_2 = torch.nn.functional.relu(self.future_desired_output_conv1(future_desired_outputs))
-        x_2 = torch.nn.functional.relu(self.future_desired_output_conv2(x_2))
+        # Conv 3
+        conv3_in = torch.cat([
+            past_outputs[:, :, :x_2.shape[2]],
+            past_interals[:, :, :x_2.shape[2]],
+            x_1[:, :, :x_2.shape[2]],
+            x_2,
+            past_inputs[:, :, :x_2.shape[2]]
+        ], dim=1)
+        x_3 = torch.nn.functional.relu(self.conv3(conv3_in))
 
-        # Flatten and feed into fully connected layers
-        x_1 = torch.flatten(x_1, start_dim=1)
-        x_2 = torch.flatten(x_2, start_dim=1)
 
-        x = torch.cat((x_1, x_2), dim=1)
-        x = torch.nn.functional.relu(self.fc1(x))
-        x = torch.nn.functional.relu(self.fc2(x))
+        # FC 1
+        fc1_in = torch.cat([
+            x_3.reshape(x_3.shape[0], -1),
+            x_1.reshape(x_1.shape[0], -1),
+            past_inputs.reshape(past_inputs.shape[0], -1)
+        ], dim=1)
+        x_4 = torch.nn.functional.relu(self.fc1(fc1_in))
 
-        # Reshape to [batch_size, num_input_vars, num_future_time_steps]
-        future_predicted_inputs = x.reshape(x.shape[0], -1, self.num_future_time_steps)
 
-        
+        # FC 2
+        x_5 = torch.nn.functional.relu(self.fc2(x_4))
 
-        return future_predicted_inputs
+        # FC 3
+        x_6 = self.fc3(x_5)
+
+        # Split output
+        next_predicted_output_diff = x_6[:, :self.num_output_vars]
+        next_predicted_internal_diff = x_6[:, self.num_output_vars:]
+
+        # Add previous output and internal state
+        next_predicted_output = next_predicted_output_diff + past_outputs[:, :, -1]
+        next_predicted_internal = next_predicted_internal_diff + past_interals[:, :, -1]
+
+        # Fix dimensions
+        next_predicted_output = next_predicted_output.unsqueeze(-1)
+        next_predicted_internal = next_predicted_internal.unsqueeze(-1)
+
+
+        return next_predicted_output, next_predicted_internal
 
     def training_step(self, batch, batch_idx):
-        past_inputs, past_outputs, past_interals, future_desired_outputs, future_predicted_inputs = batch
-        y_hat = self(past_inputs, past_outputs, past_interals, future_desired_outputs)
-        loss = torch.nn.functional.mse_loss(y_hat, future_predicted_inputs)
+        past_inputs, past_outputs, past_interals, next_input, next_output, next_internal = batch
+        next_predicted_output, next_predicted_internal = self(past_inputs, past_outputs, past_interals)
+        loss = torch.nn.functional.mse_loss(next_predicted_output, next_output) + torch.nn.functional.mse_loss(next_predicted_internal, next_internal)
         self.log('train_loss', loss)
+        print(loss)
         return loss
 
     def configure_optimizers(self):
