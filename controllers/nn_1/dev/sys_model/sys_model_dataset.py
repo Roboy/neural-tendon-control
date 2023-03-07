@@ -30,9 +30,9 @@ class SysModelDataset:
         ].to_numpy().astype(np.float32)
         past_interals = df.iloc[:self.num_time_steps_before][[
             'flex_myobrick_torque_encoder',
-            'flex_myobrick_pos_encoder',
+            #'flex_myobrick_pos_encoder',
             'extend_myobrick_torque_encoder',
-            'extend_myobrick_pos_encoder'
+            #'extend_myobrick_pos_encoder'
         ]].to_numpy().astype(np.float32)
 
         future_outputs = df.iloc[self.num_time_steps_before:self.num_time_steps_before+self.num_time_steps_after][
@@ -44,9 +44,9 @@ class SysModelDataset:
         ]].to_numpy().astype(np.float32)
         future_interals = df.iloc[self.num_time_steps_before:self.num_time_steps_before+self.num_time_steps_after][[
             'flex_myobrick_torque_encoder',
-            'flex_myobrick_pos_encoder',
+            #'flex_myobrick_pos_encoder',
             'extend_myobrick_torque_encoder',
-            'extend_myobrick_pos_encoder'
+            #'extend_myobrick_pos_encoder'
         ]].to_numpy().astype(np.float32)
                 
 
@@ -84,8 +84,10 @@ class SysModelTransform:
         self.input_channel_stds = [4.866541,  4.8768854]
         self.output_channel_means = [1619.3425]
         self.output_channel_stds = [158.12558]
-        self.internal_channel_means = [-2.0340237e+03,  6.3358569e-01, -2.1668540e+03,  1.4289156e+01]
-        self.internal_channel_stds = [1.1323308e+03, 1.1938887e+00, 1.2715853e+03, 1.0630209e+00]
+        #self.internal_channel_means = [-2.0340237e+03,  6.3358569e-01, -2.1668540e+03,  1.4289156e+01]
+        #self.internal_channel_stds = [1.1323308e+03, 1.1938887e+00, 1.2715853e+03, 1.0630209e+00]
+        self.internal_channel_means = [-2.0340237e+03, -2.1668540e+03]
+        self.internal_channel_stds = [1.1323308e+03, 1.2715853e+03]
 
     
 
