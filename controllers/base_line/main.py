@@ -7,7 +7,7 @@ from ros_loop import RosLoop
 
 from bench_handler import BenchHandler
 from waypoint_handler import WaypointHandler
-from controller_core import ControllerCore
+
 
 def run_controller_node():
     print("Starting controller node.")
@@ -27,20 +27,11 @@ def run_controller_node():
     waypoint_handler = WaypointHandler()
 
 
-    # Init controller
-    print('Init controller.')
-    controller_core = ControllerCore(waypoint_handler, bench_handler)
-
 
 
     # Start ROS loop
     print('Starting ROS loop.')
     ros_loop.start()
-
-
-    # Wait for ROS loop to start and some bench state to be published before starting controller
-    time.sleep(0.3)
-    controller_core.start()
 
 
 
@@ -58,10 +49,6 @@ def run_controller_node():
 
     print("Stopping bench node")
 
-
-    # Stop controller
-    print('Stopping controller.')
-    controller_core.terminate()
 
 
 
