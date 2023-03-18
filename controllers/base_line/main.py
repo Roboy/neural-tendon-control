@@ -9,6 +9,7 @@ from bench_handler import BenchHandler
 from waypoint_handler import WaypointHandler
 
 
+
 def run_controller_node():
     print("Starting controller node.")
 
@@ -17,14 +18,15 @@ def run_controller_node():
     print('Init ROS loop.')
     ros_loop = RosLoop()
 
-    # Init communication with bench node
-    print('Init communication with bench node.')
-    bench_handler = BenchHandler()
-
 
     # Init waypoint listener
     print('Init waypoint handler.')
     waypoint_handler = WaypointHandler()
+
+
+    # Init communication with bench node
+    print('Init communication with bench node.')
+    bench_handler = BenchHandler(waypoint_handler)
 
 
 

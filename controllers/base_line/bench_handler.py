@@ -5,11 +5,19 @@ import collections
 import rospy
 import time
 import random
+import torch
+import pandas as pd
+import numpy as np
 
 
 import sys
-sys.path.append("../../catkin_ws/devel/lib/python3/dist-packages")
 
+# Add folder to path
+sys.path.append("../nn_1/dev/ctrl_model")
+from ctrl_model import CtrlModel
+
+
+sys.path.append("../../catkin_ws/devel/lib/python3/dist-packages")
 from bench.msg import BenchState, BenchMotorControl, BenchRecorderControl
 
 TOP_ANGLE_VALUE = 2000.0
@@ -32,9 +40,40 @@ global_state = {
     'prev_extend_pwm' : 0,
 }
 
+"""
+        # Extract data
+        past_inputs = df.iloc[:self.num_time_steps_before][[
+            'flex_myobrick_pwm', 
+            'extend_myobrick_pwm'
+        ]].to_numpy().astype(np.float32)
+        past_outputs = df.iloc[:self.num_time_steps_before][
+            'angle'
+        ].to_numpy().astype(np.float32)
+        past_interals = df.iloc[:self.num_time_steps_before][[
+            'flex_myobrick_torque_encoder',
+            #'flex_myobrick_pos_encoder',
+            'extend_myobrick_torque_encoder',
+            #'extend_myobrick_pos_encoder'
+        ]].to_numpy().astype(np.float32)
+
+        # convert to tensors and fix dimensions
+        past_inputs = torch.from_numpy(past_inputs).permute(1, 0)
+        past_outputs = torch.from_numpy(past_outputs).unsqueeze(0)
+        past_interals = torch.from_numpy(past_interals).permute(1, 0)
+
+        for i in range(past_inputs.shape[0]):
+            past_inputs[i] = (past_inputs[i] - self.input_channel_means[i]) / self.input_channel_stds[i]
+        for i in range(past_outputs.shape[0]):
+            past_outputs[i] = (past_outputs[i] - self.output_channel_means[i]) / self.output_channel_stds[i]
+        for i in range(past_interals.shape[0]):
+            past_interals[i] = (past_interals[i] - self.internal_channel_means[i]) / self.internal_channel_stds[i]
+
+"""
 
 class BenchHandler:
-    def __init__(self):
+    def __init__(self, waypoint_handler):
+
+        self.waypoint_handler = waypoint_handler
 
         # Setup message event callback
         self.subscriber = rospy.Subscriber('/test_bench/BenchState', BenchState, self._on_bench_state_callback)
@@ -43,93 +82,139 @@ class BenchHandler:
         # Circular buffer for storing incoming messages
         self.state_buffer = collections.deque(maxlen=40)
 
+        self.ctrl_model = CtrlModel(
+            num_past_time_steps=30,
+            num_future_time_steps=30,
+            num_input_vars=2,
+            num_output_vars=1,
+            num_internal_vars=2
+        )
+        self.ctrl_model.load_state_dict(torch.load('../nn_1/dev/ctrl_model/ctrl_model_2023-03-18_12-00-48.pt'))
+        # send to cpu
+        self.ctrl_model = self.ctrl_model.cpu()
+        # set to eval mode
+        self.ctrl_model.eval()
 
-    def _on_bench_state_callback(self, msg):
+        # Setup data frame for storing incoming messages
+        self.state_buffer_df = pd.DataFrame(columns=[
+            'tick',
+            'angle',
+            'safety_switch_pressed', 
+            'flex_myobrick_pos_encoder', 
+            'flex_myobrick_torque_encoder', 
+            'flex_myobrick_current', 
+            'flex_myobrick_pwm', 
+            'flex_myobrick_in_running_state', 
+            'extend_myobrick_pos_encoder', 
+            'extend_myobrick_torque_encoder', 
+            'extend_myobrick_current', 
+            'extend_myobrick_pwm', 
+            'extend_myobrick_in_running_state', 
+        ])
+
+        self.input_channel_means = [5.867484, 5.720537]
+        self.input_channel_stds = [4.866541,  4.8768854]
+        self.output_channel_means = [1619.3425]
+        self.output_channel_stds = [158.12558]
+        self.internal_channel_means = [-2.0340237e+03, -2.1668540e+03]
+        self.internal_channel_stds = [1.1323308e+03, 1.2715853e+03]
+
+    def _on_bench_state_callback(self, bench_state):
+
+        t_0 = time.time()
+
+        self.state_buffer.append([
+            bench_state.flex_myobrick_pwm,
+            bench_state.extend_myobrick_pwm,
+            bench_state.angle,
+            bench_state.flex_myobrick_torque_encoder,
+            bench_state.extend_myobrick_torque_encoder,
+        ])
 
 
-        self.state_buffer.append(msg)
-
-        # Run controller
-        middle_pos = (TOP_ANGLE_VALUE + BOT_ANGLE_VALUE) / 2
-
-        bench_state = self.state_buffer[-1]
-
+        # Create a new message object to send to the bench
         current_tick = bench_state.tick
         msg = BenchMotorControl()
         msg.tick = current_tick + 1
 
-        if bench_state.angle > (TOP_ANGLE_VALUE - 100):
-            global_state['direction'] = 0
-            print('going down!')
+
+        # Check if there are enough data points for the model
+        if len(self.state_buffer) >= 30:
+
+
+
+            # Get 30 past data points
+            past = list(self.state_buffer)[-30:]
+
+            # Convert to numpy array
+            past = np.array(past).astype(np.float32)
+
+            # Get post inputs
+            past_inputs = past[:, :2]
+            # Get past outputs
+            past_outputs = past[:, 2]
+            # Get past internals
+            past_interals = past[:, 3:]
+
+
+            # convert to tensors and fix dimensions
+            past_inputs = torch.from_numpy(past_inputs).permute(1, 0)
+            past_outputs = torch.from_numpy(past_outputs).unsqueeze(0)
+            past_interals = torch.from_numpy(past_interals).permute(1, 0)
+
+            # Normalize data
+            for i in range(past_inputs.shape[0]):
+                past_inputs[i] = (past_inputs[i] - self.input_channel_means[i]) / self.input_channel_stds[i]
+            for i in range(past_outputs.shape[0]):
+                past_outputs[i] = (past_outputs[i] - self.output_channel_means[i]) / self.output_channel_stds[i]
+            for i in range(past_interals.shape[0]):
+                past_interals[i] = (past_interals[i] - self.internal_channel_means[i]) / self.internal_channel_stds[i]
+
+
+            # Get desired future outputs
+            desired_future_outputs = torch.ones(1, 30) * (TOP_ANGLE_VALUE + BOT_ANGLE_VALUE) / 2
+
+            # Normalize desired future outputs
+            for i in range(desired_future_outputs.shape[0]):
+                desired_future_outputs[i] = (desired_future_outputs[i] - self.output_channel_means[i]) / self.output_channel_stds[i]
+
+
+            # Reshape tensors
+            past_inputs = past_inputs.unsqueeze(0)
+            past_outputs = past_outputs.unsqueeze(0)
+            past_interals = past_interals.unsqueeze(0)
+            desired_future_outputs = desired_future_outputs.unsqueeze(0)
+
+
+            # apply model
+            activation_vector = self.ctrl_model(past_inputs, past_outputs, past_interals, desired_future_outputs)
+            activation_vector = activation_vector.squeeze(0)
+
+            # Denormalize activation vector 
+            for i in range(activation_vector.shape[0]):
+                activation_vector[i] = activation_vector[i] * self.input_channel_stds[i] + self.input_channel_means[i]
+
+            # Set activation vector
+            msg.flex_myobrick_pwm = activation_vector[0]
+            msg.extend_myobrick_pwm = activation_vector[1]
+
+
+
         
-
-        elif bench_state.angle < (BOT_ANGLE_VALUE + 100):
-            global_state['direction'] = 1
-            print('going up!')
-
-
         else:
-            global_state['direction'] = -1
-        
+            # Set zero pwm if not enough data points
+            msg.flex_myobrick_pwm = 0
+            msg.extend_myobrick_pwm = 0
 
-        if global_state['direction'] == 1:
-            msg.flex_myobrick_pwm = 7
-            msg.extend_myobrick_pwm = -2
-
-        if global_state['direction'] == 0:
-            msg.flex_myobrick_pwm = -2
-            msg.extend_myobrick_pwm = 7
-        
-
-        if global_state['direction'] == -1:
-            # Gaussian random variable with mean 0 and standard deviation 0.02
-            random_float_1 = random.gauss(0, 0.5)
-            random_float_2 = random.gauss(0, 0.5)
-
-            new_flex_pwm = global_state['prev_flex_pwm'] + random_float_1
-            new_extend_pwm = global_state['prev_extend_pwm'] + random_float_2
-
-            # set interval to [15, -2]
-            new_flex_pwm = max(min(new_flex_pwm, 15), -2)
-            new_extend_pwm = max(min(new_extend_pwm, 15), -2)
-
-            # Make sure tension is not low
-            if bench_state.flex_myobrick_torque_encoder > FLEX_MYOBRICK_TORQUE_ENCODER_AT_REST:
-                new_flex_pwm = new_flex_pwm + 0.01
-            if bench_state.extend_myobrick_torque_encoder > EXTEND_MYOBRICK_TORQUE_ENCODER_AT_REST:
-                new_extend_pwm = new_extend_pwm + 0.01
-
-            # Make sure tension is not high
-            if bench_state.flex_myobrick_torque_encoder < FLEX_MYOBRICK_TORQUE_ENCODER_MAX:
-                new_flex_pwm = new_flex_pwm - 0.01
-            if bench_state.extend_myobrick_torque_encoder < EXTEND_MYOBRICK_TORQUE_ENCODER_MAX:
-                new_extend_pwm = new_extend_pwm - 0.01
-
-            msg.flex_myobrick_pwm = new_flex_pwm
-            msg.extend_myobrick_pwm = new_extend_pwm
-
-
-        global_state['prev_flex_pwm'] = msg.flex_myobrick_pwm
-        global_state['prev_extend_pwm'] = msg.extend_myobrick_pwm
 
         self.publisher.publish(msg)
 
 
+        t_1 = time.time()
+        # Print with centered decimal point
+        print('Time to run controller: {0:.3f} ms'.format((t_1 - t_0) * 1000))
 
-        if bench_state.safety_switch_pressed == True:
-            print('Kill switch is pressed, stopping.')
-            rospy.signal_shutdown('')
-            sys.exit()
 
-        if bench_state.flex_myobrick_in_running_state == False:
-            print('Flex MyoBrick is not in running state, stopping.')
-            rospy.signal_shutdown('')
-            sys.exit()
-
-        if bench_state.extend_myobrick_in_running_state == False:
-            print('Extend MyoBrick is not in running state, stopping.')
-            rospy.signal_shutdown('')
-            sys.exit()
 
 
     def get_n_last_state_vectors(self, n):
@@ -145,4 +230,62 @@ class BenchHandler:
     def get_last_state_vector(self):
         return self.state_buffer[-1]
 
+
+# Create transform class
+class SysModelTransform:
+    def __init__(self):
+        """
+        From tick_based_100hz_23-02-19.csv we get:
+            input_channel_means [5.867484 5.720537]
+            input_channel_stds [4.866541  4.8768854]
+            output_channel_means 1619.3425
+            output_channel_stds 158.12558
+            internal_channel_means [-2.0340237e+03  6.3358569e-01 -2.1668540e+03  1.4289156e+01]
+            internal_channel_stds [1.1323308e+03 1.1938887e+00 1.2715853e+03 1.0630209e+00]
+        """
+
+        self.input_channel_means = [5.867484, 5.720537]
+        self.input_channel_stds = [4.866541,  4.8768854]
+        self.output_channel_means = [1619.3425]
+        self.output_channel_stds = [158.12558]
+        #self.internal_channel_means = [-2.0340237e+03,  6.3358569e-01, -2.1668540e+03,  1.4289156e+01]
+        #self.internal_channel_stds = [1.1323308e+03, 1.1938887e+00, 1.2715853e+03, 1.0630209e+00]
+        self.internal_channel_means = [-2.0340237e+03, -2.1668540e+03]
+        self.internal_channel_stds = [1.1323308e+03, 1.2715853e+03]
+
+    
+
+    def __call__(self, past_inputs, past_outputs, past_interals, future_inputs, future_outputs, future_interals):
+        for i in range(past_inputs.shape[0]):
+            past_inputs[i] = (past_inputs[i] - self.input_channel_means[i]) / self.input_channel_stds[i]
+        for i in range(past_outputs.shape[0]):
+            past_outputs[i] = (past_outputs[i] - self.output_channel_means[i]) / self.output_channel_stds[i]
+        for i in range(past_interals.shape[0]):
+            past_interals[i] = (past_interals[i] - self.internal_channel_means[i]) / self.internal_channel_stds[i]
+
+        for i in range(future_inputs.shape[0]):
+            future_inputs[i] = (future_inputs[i] - self.input_channel_means[i]) / self.input_channel_stds[i]
+        for i in range(future_outputs.shape[0]):
+            future_outputs[i] = (future_outputs[i] - self.output_channel_means[i]) / self.output_channel_stds[i]
+        for i in range(future_interals.shape[0]):
+            future_interals[i] = (future_interals[i] - self.internal_channel_means[i]) / self.internal_channel_stds[i]
+
+        return past_inputs, past_outputs, past_interals, future_inputs, future_outputs, future_interals
+    
+    def reverse(self, past_inputs, past_outputs, past_interals, future_inputs, future_outputs, future_interals):
+        for i in range(past_inputs.shape[0]):
+            past_inputs[i] = (past_inputs[i] * self.input_channel_stds[i]) + self.input_channel_means[i]
+        for i in range(past_outputs.shape[0]):
+            past_outputs[i] = (past_outputs[i] * self.output_channel_stds[i]) + self.output_channel_means[i]
+        for i in range(past_interals.shape[0]):
+            past_interals[i] = (past_interals[i] * self.internal_channel_stds[i]) + self.internal_channel_means[i]
+
+        for i in range(future_inputs.shape[0]):
+            future_inputs[i] = (future_inputs[i] * self.input_channel_stds[i]) + self.input_channel_means[i]
+        for i in range(future_outputs.shape[0]):
+            future_outputs[i] = (future_outputs[i] * self.output_channel_stds[i]) + self.output_channel_means[i]
+        for i in range(future_interals.shape[0]):
+            future_interals[i] = (future_interals[i] * self.internal_channel_stds[i]) + self.internal_channel_means[i]
+
+        return past_inputs, past_outputs, past_interals, future_inputs, future_outputs, future_interals
     
