@@ -1,3 +1,2 @@
 float32 angle
-float64 time
-
+int64 tick
